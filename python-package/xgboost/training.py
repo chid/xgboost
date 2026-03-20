@@ -3,7 +3,9 @@
 """Training Library containing training routines."""
 
 import copy
+import json
 import os
+import warnings
 import weakref
 from typing import (
     TYPE_CHECKING,
@@ -47,6 +49,29 @@ _RefError = (
     "Training dataset should be used as a reference when constructing the "
     "`QuantileDMatrix` for evaluation.",
 )
+
+
+def _warn_on_booster_mismatch(
+    params: Dict[str, Any], xgb_model: Optional[Union[str, os.PathLike, Booster, bytearray]]
+) -> None:
+    """Warn when continuation loads a model with a different booster type."""
+    if not isinstance(xgb_model, Booster):
+        return
+
+    requested_booster = params.get("booster")
+    if requested_booster is None:
+        return
+
+    loaded_config = json.loads(xgb_model.save_config())
+    loaded_booster = loaded_config["learner"]["gradient_booster"]["name"]
+    if requested_booster != loaded_booster:
+        warnings.warn(
+            "The `booster` parameter does not match the booster type in `xgb_model`. "
+            f"Got booster={requested_booster!r}, xgb_model booster={loaded_booster!r}. "
+            "The loaded model may be ignored when continuing training.",
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 @_deprecate_positional_args
@@ -180,6 +205,7 @@ def train(
         ):
             raise ValueError(_RefError)
 
+    _warn_on_booster_mismatch(params, xgb_model)
     bst = Booster(params, [dtrain] + [d[0] for d in evals], model_file=xgb_model)
     start_iteration = 0
 

@@ -149,6 +149,17 @@ class TestModels:
         )
         assert booster.num_boosted_rounds() == 8
 
+    def test_boost_from_existing_model_mismatched_booster_warns(self) -> None:
+        X, _ = tm.load_agaricus(__file__)
+        booster = xgb.train({"tree_method": "hist"}, X, num_boost_round=4)
+
+        with pytest.warns(UserWarning, match="booster="):
+            updated = xgb.train(
+                {"booster": "gblinear"}, X, num_boost_round=4, xgb_model=booster
+            )
+
+        assert updated.num_boosted_rounds() == 4
+
     def test_custom_objective(self) -> None:
         dtrain, dtest = tm.load_agaricus(__file__)
         run_custom_objective("hist", "cpu", dtrain, dtest)

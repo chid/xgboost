@@ -87,4 +87,14 @@ test_that("data.table accepts xgb.Booster in list columns", {
     predict(dt$model[[1]], x),
     predict(model, x)
   )
+
+  fname <- file.path(tempdir(), "xgb_bst_dt.Rds")
+  saveRDS(dt, fname)
+  dt_new <- readRDS(fname)
+
+  expect_s3_class(dt_new$model[[1]], "xgb.Booster")
+  expect_equal(
+    predict(dt_new$model[[1]], x),
+    predict(model, x)
+  )
 })

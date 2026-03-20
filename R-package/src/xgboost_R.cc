@@ -948,6 +948,20 @@ SEXP XGBAltrepPointerGetElt_R(SEXP R_altrepped_obj, R_xlen_t idx) {
   return R_altrep_data1(R_altrepped_obj);
 }
 
+void XGBAltrepPointerSetElt_R(SEXP R_altrepped_obj, R_xlen_t idx, SEXP value) {
+  if (idx != 0) {
+    Rf_error("xgb.Booster has only one element.");
+  }
+
+  // Preserve the wrapped external pointer when the incoming value is another
+  // xgb.Booster wrapper.
+  if (R_altrep_inherits(value, XGBAltrepPointerClass)) {
+    value = R_altrep_data1(value);
+  }
+
+  R_set_altrep_data1(R_altrepped_obj, value);
+}
+
 SEXP XGBMakeEmptyAltrep() {
   SEXP class_name = Rf_protect(Rf_mkString("xgb.Booster"));
   SEXP elt_names = Rf_protect(Rf_mkString("ptr"));
@@ -1048,6 +1062,7 @@ XGB_DLL void XGBInitializeAltrepClass_R(DllInfo *dll) {
   XGBAltrepPointerClass = R_make_altlist_class("XGBAltrepPointerClass", "xgboost", dll);
   R_set_altrep_Length_method(XGBAltrepPointerClass, XGBAltrepPointerLength_R);
   R_set_altlist_Elt_method(XGBAltrepPointerClass, XGBAltrepPointerGetElt_R);
+  R_set_altlist_Set_elt_method(XGBAltrepPointerClass, XGBAltrepPointerSetElt_R);
   R_set_altrep_Inspect_method(XGBAltrepPointerClass, XGBAltrepInspector_R);
   R_set_altrep_Serialized_state_method(XGBAltrepPointerClass, XGBAltrepSerializer_R);
   R_set_altrep_Unserialize_method(XGBAltrepPointerClass, XGBAltrepDeserializer_R);

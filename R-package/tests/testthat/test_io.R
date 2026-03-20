@@ -70,3 +70,31 @@ test_that("R serializers keep C config", {
   )
   expect_equal(variable.names(model), variable.names(model_new))
 })
+
+test_that("data.table accepts xgb.Booster in list columns", {
+  data(mtcars)
+  y <- mtcars$mpg
+  x <- as.matrix(mtcars[, -1])
+  model <- xgb.train(
+    data = xgb.DMatrix(x, label = y, nthread = 1),
+    params = xgb.params(nthread = 1, max_depth = 2),
+    nrounds = 3
+  )
+
+  dt <- data.table::data.table(model = list(model))
+  expect_s3_class(dt$model[[1]], "xgb.Booster")
+  expect_equal(
+    predict(dt$model[[1]], x),
+    predict(model, x)
+  )
+
+  fname <- file.path(tempdir(), "xgb_bst_dt.Rds")
+  saveRDS(dt, fname)
+  dt_new <- readRDS(fname)
+
+  expect_s3_class(dt_new$model[[1]], "xgb.Booster")
+  expect_equal(
+    predict(dt_new$model[[1]], x),
+    predict(model, x)
+  )
+})

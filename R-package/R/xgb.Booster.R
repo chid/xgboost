@@ -62,6 +62,10 @@ is.null.handle <- function(handle) {
 # internal utility function
 xgb.get.handle <- function(object) {
   if (inherits(object, "xgb.Booster")) {
+    obj <- unclass(object)
+    if (length(obj) != 1L || !identical(names(obj), "ptr")) {
+      stop("'xgb.Booster' object is corrupted or is from an incompatible XGBoost version.")
+    }
     handle <- object$ptr
     if (is.null(handle) || !inherits(handle, "externalptr")) {
       stop("'xgb.Booster' object is corrupted or is from an incompatible XGBoost version.")
@@ -73,6 +77,26 @@ xgb.get.handle <- function(object) {
     stop("invalid 'xgb.Booster' (blank 'externalptr').")
   }
   return(handle)
+}
+
+#' @export
+`[<-.xgb.Booster` <- function(x, i, value) {
+  stop("xgb.Booster list internals are read-only.")
+}
+
+#' @export
+`[[<-.xgb.Booster` <- function(x, i, value) {
+  stop("xgb.Booster list internals are read-only.")
+}
+
+#' @export
+`$<-.xgb.Booster` <- function(x, name, value) {
+  stop("xgb.Booster list internals are read-only.")
+}
+
+#' @export
+`names<-.xgb.Booster` <- function(x, value) {
+  stop("xgb.Booster list internals are read-only.")
 }
 
 #' Predict method for XGBoost model

@@ -71,8 +71,38 @@ test_that("R serializers keep C config", {
   expect_equal(variable.names(model), variable.names(model_new))
 })
 
-test_that("data.table accepts xgb.Booster in list columns", {
+test_that("xgb.Booster objects are read-only list wrappers", {
   data(mtcars)
+  model <- xgboost(mtcars[, -1], mtcars$mpg, nthreads = 1, nrounds = 3)
+
+  expect_error(model[1] <- list(model[[1]]), "read-only")
+  expect_error(model[[1]] <- model[[1]], "read-only")
+  expect_error(model[[2]] <- 1, "read-only")
+  expect_error(model$foo <- 1, "read-only")
+  expect_error(names(model) <- "foo", "read-only")
+  expect_error(unname(model), "read-only")
+  expect_error({
+    alt_obj <- unclass(model)
+    alt_obj[[1]] <- 1
+  }, "read-only")
+
+  bad <- list(ptr = model[[1]], extra = 1)
+  class(bad) <- class(model)
+
+  expect_error(predict(bad, as.matrix(mtcars[, -1])), "corrupted|blank 'externalptr'")
+})
+
+test_that("data.table accepts xgb.Booster in list columns and copies", {
+  data(mtcars)
+  x_issue <- mtcars[, -1]
+  model_issue <- xgboost(x_issue, mtcars$mpg, nthreads = 1, nrounds = 3)
+  dt_issue <- data.table::data.table(model = list(model_issue))
+  expect_s3_class(dt_issue$model[[1]], "xgb.Booster")
+  expect_equal(
+    predict(dt_issue$model[[1]], as.matrix(x_issue)),
+    predict(model_issue, as.matrix(x_issue))
+  )
+
   y <- mtcars$mpg
   x <- as.matrix(mtcars[, -1])
   model <- xgb.train(
@@ -85,6 +115,13 @@ test_that("data.table accepts xgb.Booster in list columns", {
   expect_s3_class(dt$model[[1]], "xgb.Booster")
   expect_equal(
     predict(dt$model[[1]], x),
+    predict(model, x)
+  )
+
+  dt_copy <- data.table::copy(dt)
+  expect_s3_class(dt_copy$model[[1]], "xgb.Booster")
+  expect_equal(
+    predict(dt_copy$model[[1]], x),
     predict(model, x)
   )
 

@@ -937,7 +937,7 @@ void _BoosterFinalizer(SEXP R_ptr) {
 
 /* Booster is represented as an altrep list with one element which
 corresponds to an 'externalptr' holding the C object, forbidding
-modification by not implementing setters, and adding custom serialization. */
+modification while adding custom serialization. */
 R_altrep_class_t XGBAltrepPointerClass;
 
 R_xlen_t XGBAltrepPointerLength_R(SEXP R_altrepped_obj) {
@@ -953,13 +953,14 @@ void XGBAltrepPointerSetElt_R(SEXP R_altrepped_obj, R_xlen_t idx, SEXP value) {
     Rf_error("xgb.Booster has only one element.");
   }
 
-  // Preserve the wrapped external pointer when the incoming value is another
-  // xgb.Booster wrapper.
+  SEXP current = R_altrep_data1(R_altrepped_obj);
   if (R_altrep_inherits(value, XGBAltrepPointerClass)) {
     value = R_altrep_data1(value);
   }
 
-  R_set_altrep_data1(R_altrepped_obj, value);
+  if (value != current) {
+    Rf_error("xgb.Booster objects are read-only.");
+  }
 }
 
 SEXP XGBMakeEmptyAltrep() {
